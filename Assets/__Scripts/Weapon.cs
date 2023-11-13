@@ -135,9 +135,11 @@ public class Weapon : MonoBehaviour {
             
             case WeaponType.laser:
                 p = MakeProjectile();
-                p.rigid.velocity = vel;
-
-            break;
+                p.transform.parent = this.transform; 
+                Vector3 offset = p.transform.position;
+                offset.y += 8f;
+                p.transform.position = offset;
+                break;
         }
     }
 
