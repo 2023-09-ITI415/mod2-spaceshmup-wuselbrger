@@ -30,6 +30,33 @@ public class Enemy_4 : Enemy {
     private float timeStart; // Birth time for this Enemy_4
     private float duration = 4; // Duration of movement
 
+    IEnumerator DamageOT(float start, float end){
+        float timeElapsed = 0;
+            while(timeElapsed < 1f){
+                float t = timeElapsed/1f;
+                lerpedValue = Mathf.Lerp(0,1,t);
+                timeElapsed += Time.deltaTime;
+                yield return null;
+            }
+            lerpedValue = end;
+            ShowDamage();
+            health -= damageTakenOT;
+            if(health <= 0)
+                {
+                    // Tell the Main singleton that this ship was destroyed
+                    if (!notifiedOfDestruction)
+                    {
+                        Main.S.ShipDestroyed(this);
+                    }
+                    notifiedOfDestruction = true;
+                    // Destroy this enemy
+                    Destroy(this.gameObject);
+                }
+            else    
+                StartCoroutine(DamageOT(0,1));
+    }
+
+
     private void Start()
     {
         // There is already an initial position chosen by Main.SpawnEnemy()
@@ -172,6 +199,10 @@ public class Enemy_4 : Enemy {
                 // It's not protected, so make it take damage
                 // Get the damage amount from the Projectile.type and Main.W_DEFS
                 prtHit.health -= Main.GetWeaponDefinition(p.type).damageOnHit;
+                if(Main.GetWeaponDefinition(p.type).continuousDamage > 0){
+                    damageTakenOT = Main.GetWeaponDefinition(p.type).continuousDamage;
+                    StartCoroutine(DamageOT(0,1));
+                }
                 // Show damage on the part
                 ShowLocalizedDamage(prtHit.mat);
                 if(prtHit.health <= 0)
@@ -199,5 +230,24 @@ public class Enemy_4 : Enemy {
                 Destroy(other); // Destroy the ProjectileHero
                 break;
         }
+    }
+
+    void ShowDamage()
+    {
+        foreach (Material m in materials)
+        {
+            m.color = Color.red;
+        }
+        showingDamage = true;
+        damageDoneTime = Time.time + showDamageDuration;
+    }
+
+    void UnShowDamage()
+    {
+        for (int i=0; i<materials.Length; i++)
+        {
+            materials[i].color = originalColors[i];
+        }
+        showingDamage = false;
     }
 }

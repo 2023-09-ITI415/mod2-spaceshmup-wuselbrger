@@ -9,8 +9,9 @@ public class Enemy : MonoBehaviour {
     public float fireRate = 0.3f; // Seconds/shot (Unused)
     public float health = 10;
     public int score = 100; // Points earned for destroying this
-    public float showDamageDuration = 0.1f; // # seconds to show damage
     public float powerUpDropChance = 1f; // Chance to drop a power-up
+    public float showDamageDuration = 0.1f; // # seconds to show damage
+
 
     [Header("Set Dynamically: Enemy")]
     public Color[] originalColors;
@@ -18,6 +19,8 @@ public class Enemy : MonoBehaviour {
     public bool showingDamage = false;
     public float damageDoneTime; // Time to stop showing damage
     public bool notifiedOfDestruction = false; // Will be used later
+    public float damageTakenOT = 0f;
+    public float lerpedValue;
 
     protected BoundsCheck bndCheck;
 
@@ -46,9 +49,35 @@ public class Enemy : MonoBehaviour {
         }
     }
 
+    IEnumerator DamageOT(float start, float end){
+        float timeElapsed = 0;
+            while(timeElapsed < 1f){
+                float t = timeElapsed/1f;
+                lerpedValue = Mathf.Lerp(0,1,t);
+                timeElapsed += Time.deltaTime;
+                yield return null;
+            }
+            lerpedValue = end;
+            ShowDamage();
+            health -= damageTakenOT;
+            if(health <= 0)
+                {
+                    // Tell the Main singleton that this ship was destroyed
+                    if (!notifiedOfDestruction)
+                    {
+                        Main.S.ShipDestroyed(this);
+                    }
+                    notifiedOfDestruction = true;
+                    // Destroy this enemy
+                    Destroy(this.gameObject);
+                }
+            else    
+                StartCoroutine(DamageOT(0,1));
+    }
+
     void Update()
     {
-        Move();
+        Move();    
 
         if(showingDamage && Time.time > damageDoneTime)
         {
@@ -87,6 +116,11 @@ public class Enemy : MonoBehaviour {
                 ShowDamage();
                 // Get the damage amount from the Main WEAP_DICT
                 health -= Main.GetWeaponDefinition(p.type).damageOnHit;
+                if(Main.GetWeaponDefinition(p.type).continuousDamage > 0){
+                    damageTakenOT = Main.GetWeaponDefinition(p.type).continuousDamage;
+                    StartCoroutine(DamageOT(0,1));
+                }
+
                 if(health <= 0)
                 {
                     // Tell the Main singleton that this ship was destroyed
